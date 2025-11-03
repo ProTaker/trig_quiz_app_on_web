@@ -1,4 +1,4 @@
-# trig_transform_quiz_app_final_displaystyle_v2.py
+# trig_transform_quiz_app_final_fixed_v2.py
 import streamlit as st
 import random
 import time
@@ -26,7 +26,7 @@ div.stButton > button {
     font-size: 18px; 
 }
 
-/* ★★★ st.dataframe のセル内での数式レンダリングを強化するため、フォントサイズを少し上げるかも ★★★ */
+/* st.table/st.dataframe のセル内の数式表示を調整 */
 .stTable, .stDataFrame {
     font-size: 20px; 
 }
@@ -68,7 +68,7 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 変換公式の定義 (displaystyleを追加)
+# 変換公式の定義 (修正箇所: \dfrac を使用)
 # -----------------------------
 
 functions = ["sin", "cos", "tan"]
@@ -82,14 +82,15 @@ OFFSETS = {
     "mneg270_t": r"(-270^\circ+\theta)", "mneg270m_t": r"(-270^\circ-\theta)",
 }
 
-# \displaystyle を追加し、数式の表現を明確に
+# ★★★ 修正箇所: \displaystyle\frac を \dfrac に変更 ★★★
 RESULT_OPTIONS = {
     "sin_t": r"\sin\theta", "-sin_t": r"-\sin\theta",
     "cos_t": r"\cos\theta", "-cos_t": r"-\cos\theta",
     "tan_t": r"\tan\theta", "-tan_t": r"-\tan\theta",
-    "cot_t": r"\displaystyle\frac{1}{\tan\theta}", 
-    "-cot_t": r"-\displaystyle\frac{1}{\tan\theta}",
+    "cot_t": r"\dfrac{1}{\tan\theta}", 
+    "-cot_t": r"-\dfrac{1}{\tan\theta}",
 }
+# ★★★ 修正箇所はここまで ★★★
 
 SIN_COS_OPTIONS_KEYS = ["sin_t", "-sin_t", "cos_t", "-cos_t"] 
 TAN_OPTIONS_KEYS = ["tan_t", "-tan_t", "cot_t", "-cot_t"] 
@@ -185,7 +186,7 @@ def check_answer_and_advance(selected_key):
 initialize_session_state()
 
 # -----------------------------------------------
-# アプリの描画
+# アプリの描画 (変更なし)
 # -----------------------------------------------
 
 if st.session_state.show_result:
@@ -204,14 +205,12 @@ if st.session_state.show_result:
     for i, item in enumerate(st.session_state.history, 1):
         problem_disp = rf"{item['question_disp']} = ?" 
         
-        # ★★★ 修正箇所: \text{\LARGE$...$} で囲み、Markdownのインライン数式ではなく
-        # ★★★ st.latexに近いブロックとしてレンダリングを強制する（Streamlitの裏技）
         user_latex = RESULT_OPTIONS[item['user_answer_key']]
         correct_latex = RESULT_OPTIONS[item['correct_answer_key']]
 
-        # $$ \text{\LARGE \displaystyle\frac{1}{\tan\theta}} $$ の形式
-        user_disp = rf"$$ \text{{\LARGE {user_latex}}} $$"
-        correct_disp = rf"$$ \text{{\LARGE {correct_latex}}} $$"
+        # 純粋な数式文字列を $$ で囲む
+        user_disp = rf"$$ {user_latex} $$"
+        correct_disp = rf"$$ {correct_latex} $$"
 
         mark = "○" if item['is_correct'] else "×"
 
@@ -249,8 +248,8 @@ else:
     
     cols = st.columns(4)
     for i, key in enumerate(display_options_keys):
-        # ボタンのラベルにも \displaystyle と \LARGE を適用
-        latex_label = rf"$$ \text{{\LARGE {RESULT_OPTIONS[key]}}} $$"
+        # ボタンのラベルも純粋な数式文字列を $$ で囲む
+        latex_label = rf"$$ {RESULT_OPTIONS[key]} $$" 
         
         with cols[i]:
             button_key = f"option_{st.session_state.question_count}_{key}"
