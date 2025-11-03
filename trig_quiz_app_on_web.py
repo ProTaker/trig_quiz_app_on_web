@@ -9,9 +9,9 @@ import pandas as pd
 st.set_page_config(page_title="三角比の変換公式クイズ", layout="centered")
 
 # タイトル
-st.title("三角比の変換公式クイズ")
-st.markdown(f"全 **10 問** に挑戦します。問題の関数によって**選択肢は4種類に変化し、順番は固定**されます。", unsafe_allow_html=True)
-st.markdown("---")
+st.title("三角比クイズ（補角・余角編）")
+#st.markdown(f"全 **10 問** に挑戦します。問題の関数によって**選択肢は4種類に変化し、順番は固定**されます。", unsafe_allow_html=True)
+#st.markdown("---")
 
 
 # -----------------------------
@@ -240,7 +240,7 @@ else:
     current_func = st.session_state.func
     current_offset_key = st.session_state.offset_key
     
-    question_latex = rf"$$ \text{{{current_func}}} {OFFSETS[current_offset_key]} = ? $$"
+    question_latex = rf"$$ \text{{{current_func}}} {OFFSETS[current_offset_key]} $$を簡単にせよ"
 
     st.markdown(question_latex)
     st.markdown("---")
