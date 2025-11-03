@@ -1,156 +1,95 @@
 import random
 import streamlit as st
-import time
+import pandas as pd
 from decimal import Decimal, ROUND_HALF_UP
+import time
 
-# -----------------------------
-# 三角比簡単化ルール（分数は\displaystyle）
-# -----------------------------
-def simplify(func, expr):
+st.title("三角比クイズ (θの簡単化)")
+
+# --- 簡単化ルール ---
+def simplify(func, base_angle):
     rules = {
-        "sin": {
-            "90°+θ": r"\cos\theta", "180°+θ": r"-\sin\theta", "270°+θ": r"-\cos\theta",
-            "-90°+θ": r"-\cos\theta", "-180°+θ": r"-\sin\theta", "-270°+θ": r"\cos\theta",
-            "-θ": r"-\sin\theta",
-            "90°-θ": r"\cos\theta", "180°-θ": r"\sin\theta", "270°-θ": r"-\cos\theta",
-            "-90°-θ": r"\cos\theta", "-180°-θ": r"-\sin\theta", "-270°-θ": r"-\cos\theta"
-        },
-        "cos": {
-            "90°+θ": r"-\sin\theta", "180°+θ": r"-\cos\theta", "270°+θ": r"\sin\theta",
-            "-90°+θ": r"\sin\theta", "-180°+θ": r"-\cos\theta", "-270°+θ": r"-\sin\theta",
-            "-θ": r"\cos\theta",
-            "90°-θ": r"\sin\theta", "180°-θ": r"-\cos\theta", "270°-θ": r"-\sin\theta",
-            "-90°-θ": r"-\sin\theta", "-180°-θ": r"-\cos\theta", "-270°-θ": r"\sin\theta"
-        },
-        "tan": {
-            "90°+θ": r"\displaystyle-\frac{1}{\tan\theta}", "180°+θ": r"\tan\theta", "270°+θ": r"\displaystyle-\frac{1}{\tan\theta}",
-            "-90°+θ": r"\displaystyle-\frac{1}{\tan\theta}", "-180°+θ": r"\tan\theta", "-270°+θ": r"\displaystyle-\frac{1}{\tan\theta}",
-            "-θ": r"-\tan\theta",
-            "90°-θ": r"\displaystyle\frac{1}{\tan\theta}", "180°-θ": r"-\tan\theta", "270°-θ": r"\displaystyle\frac{1}{\tan\theta}",
-            "-90°-θ": r"\displaystyle\frac{1}{\tan\theta}", "-180°-θ": r"-\tan\theta", "-270°-θ": r"\displaystyle\frac{1}{\tan\theta}"
-        }
+        "sin": {0: "sinθ", 90: "cosθ", 180: "-sinθ", 270: "-cosθ", 360: "sinθ",
+                -90: "-cosθ", -180: "-sinθ", -270: "cosθ"},
+        "cos": {0: "cosθ", 90: "-sinθ", 180: "-cosθ", 270: "sinθ", 360: "cosθ",
+                -90: "sinθ", -180: "-cosθ", -270: "-sinθ"},
+        "tan": {0: "tanθ", 90: "1/tanθ", 180: "tanθ", 270: "-1/tanθ", 360: "tanθ",
+                -90: "-1/tanθ", -180: "tanθ", -270: "1/tanθ"}
     }
-    return rules[func][expr]
+    return rules[func][base_angle]
 
-# -----------------------------
-# 選択肢固定（LaTeX形式）
-# -----------------------------
-BUTTON_OPTIONS = [
-    r"\sin\theta", r"-\sin\theta",
-    r"\cos\theta", r"-\cos\theta",
-    r"\tan\theta", r"-\tan\theta",
-    r"\displaystyle\frac{1}{\tan\theta}", r"\displaystyle-\frac{1}{\tan\theta}"
-]
+# --- 選択肢固定 ---
+OPTIONS = ["sinθ", "-sinθ", "cosθ", "-cosθ", "tanθ", "-tanθ", "1/tanθ", "-1/tanθ"]
 
-# -----------------------------
-# セッションステート初期化
-# -----------------------------
-for key, val in [("question_number",1), ("score",0), ("start_time",time.time()), 
-                 ("answers",[]), ("current_problem",None), ("current_answer",None)]:
-    if key not in st.session_state:
-        st.session_state[key] = val
+# --- セッションステート初期化 ---
+if "question_number" not in st.session_state:
+    st.session_state.question_number = 0
+if "score" not in st.session_state:
+    st.session_state.score = 0
+if "feedback" not in st.session_state:
+    st.session_state.feedback = []
+if "start_time" not in st.session_state:
+    st.session_state.start_time = time.time()
+if "results" not in st.session_state:
+    st.session_state.results = []
 
-# -----------------------------
-# 問題生成
-# -----------------------------
+# --- 問題生成関数 ---
 def generate_question():
     funcs = ["sin", "cos", "tan"]
-    patterns = [
-        "90°+θ", "180°+θ", "270°+θ",
-        "-90°+θ", "-180°+θ", "-270°+θ",
-        "-θ",
-        "90°-θ", "180°-θ", "270°-θ",
-        "-90°-θ", "-180°-θ", "-270°-θ"
-    ]
+    base_angles = [0, 90, 180, 270, 360, -90, -180, -270]
     func = random.choice(funcs)
-    expr = random.choice(patterns)
-
-    if expr == "-θ":
-        problem = rf"\{func}\ (-\theta)\ を簡単にせよ."
+    angle = random.choice(base_angles)
+    if angle == 0:
+        problem = f"{func}θ"
     else:
-        problem = rf"\{func}\ ({expr})\ を簡単にせよ."
-    
-    correct = simplify(func, expr)
+        sign = "+" if angle > 0 else ""
+        problem = f"{func}({angle}°{sign}θ)"
+    correct = simplify(func, angle)
     return problem, correct
 
-# -----------------------------
-# CSS: ボタン縦横揃える
-# -----------------------------
-st.markdown("""
-<style>
-div.stButton > button {
-    width: 160px !important;
-    height: 70px !important;
-    font-size: 22px;
-}
-</style>
-""", unsafe_allow_html=True)
+# --- メインロジック ---
+if st.session_state.question_number < 10:
+    problem, correct = generate_question()
+    st.subheader(f"問題 {st.session_state.question_number+1}")
+    st.markdown(f"### {problem} を簡単にせよ")
 
-# -----------------------------
-# タイトル
-# -----------------------------
-st.title("三角比クイズ (補角・余角)")
-
-# -----------------------------
-# 10問終了チェック
-# -----------------------------
-if st.session_state.question_number > 10:
+    cols = st.columns(4)
+    for idx, option in enumerate(OPTIONS):
+        if cols[idx % 4].button(option):
+            if option == correct:
+                st.success("正解！")
+                st.session_state.score += 1
+                st.session_state.feedback.append(f"問題{st.session_state.question_number+1}: 正解")
+            else:
+                st.error(f"不正解。正解は {correct}")
+                st.session_state.feedback.append(f"問題{st.session_state.question_number+1}: × 正解は {correct}")
+            st.session_state.question_number += 1
+            st.experimental_rerun()
+else:
+    # --- 結果表示 ---
     end_time = time.time()
     elapsed = Decimal(str(end_time - st.session_state.start_time)).quantize(Decimal('0.01'), ROUND_HALF_UP)
     total = st.session_state.score * 10
-    st.subheader("結果")
+    st.subheader("結果発表")
     st.write(f"得点: {total}/100 点")
     st.write(f"経過時間: {elapsed} 秒")
 
-    # LaTeX 表で表示（先頭列に問題番号）
-    latex_table = r"\def\arraystretch{3}\begin{array}{|c|c|c|c|c|} \hline 番号 & 問題 & あなたの解答 & 正解 & 正誤 \\ \hline "
-    for i, a in enumerate(st.session_state.answers, 1):
-        mark = "○" if a["user"] == a["correct"] else "×"
-        latex_table += f"{i} & {a['problem']} & {a['user']} & {a['correct']} & {mark} \\\\ \hline "
-    latex_table += r"\end{array}"
-    st.latex(latex_table)
+    st.write("### 各問題の結果")
+    for f in st.session_state.feedback:
+        st.write(f)
+
+    # --- 履歴テーブル ---
+    st.session_state.results.append((total, elapsed))
+    df = pd.DataFrame(st.session_state.results, columns=["得点", "時間"])
+    st.write("### 試験結果の履歴")
+    st.dataframe(df)
 
     if st.button("もう一度やる"):
-        st.session_state.update({
-            "question_number": 1,
-            "score": 0,
-            "start_time": time.time(),
-            "answers": [],
-            "current_problem": None,
-            "current_answer": None
-        })
+        st.session_state.question_number = 0
+        st.session_state.score = 0
+        st.session_state.feedback = []
+        st.session_state.start_time = time.time()
+        st.experimental_rerun()
 
-# -----------------------------
-# 出題中
-# -----------------------------
-else:
-    if st.session_state.current_problem is None:
-        problem, correct = generate_question()
-        st.session_state.current_problem = problem
-        st.session_state.current_answer = correct
-
-    st.subheader(f"問題 {st.session_state.question_number}: ")
-    st.markdown(rf"$$ {st.session_state.current_problem} $$")
-
-    clicked_option = None
-    for row in range(2):
-        cols = st.columns(4)
-        for col_idx in range(4):
-            idx = row*4 + col_idx
-            option = BUTTON_OPTIONS[idx]
-            with cols[col_idx]:
-                if st.button(f"${option}$", key=f"{st.session_state.question_number}_{idx}"):
-                    clicked_option = option
-
-    if clicked_option:
-        st.session_state.answers.append({
-            "problem": st.session_state.current_problem,
-            "user": clicked_option,
-            "correct": st.session_state.current_answer
-        })
-        if clicked_option == st.session_state.current_answer:
-            st.session_state.score += 1
-
-        st.session_state.question_number += 1
-        st.session_state.current_problem = None
-        st.session_state.current_answer = None
+# --- スコア表示 ---
+st.write(f"現在のスコア: {st.session_state.score * 10}/100 点")
