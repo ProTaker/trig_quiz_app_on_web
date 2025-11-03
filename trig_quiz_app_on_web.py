@@ -275,7 +275,7 @@ elif st.session_state.show_result:
 
     table_data = []
     for i, item in enumerate(st.session_state.history, 1):
-        problem_disp = rf"{item['question_disp']} = ?" 
+        problem_disp = rf"{item['question_disp']} " 
         
         user_latex = RESULT_OPTIONS[item['user_answer_key']]
         correct_latex = RESULT_OPTIONS[item['correct_answer_key']]
