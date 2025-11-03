@@ -6,10 +6,10 @@ from decimal import Decimal, ROUND_HALF_UP
 import pandas as pd
 
 # ページ設定
-st.set_page_config(page_title="三角比の変換公式クイズ", layout="centered")
+st.set_page_config(page_title="三角比クイズ（補角・余角編）", layout="centered")
 
 # タイトル
-st.title("三角比クイズ（変換公式編）")
+st.title("三角比クイズ（補角・余角編）")
 
 # -----------------------------
 # CSS（変更なし）
@@ -227,7 +227,7 @@ if not st.session_state.range_selected:
     # 範囲選択画面
     st.header("出題範囲を選択してください")
     st.markdown("---")
-    st.write("どの変換公式のグループを中心に解きますか？")
+    #st.write("どの変換公式のグループを中心に解きますか？")
 
     # ボタンを2行に分ける
     row1 = st.columns(2)
