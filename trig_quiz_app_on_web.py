@@ -1,4 +1,4 @@
-# trig_transform_quiz_app_final_fixed_v2.py
+# trig_transform_quiz_app_range_selected_v2.py
 import streamlit as st
 import random
 import time
@@ -9,13 +9,10 @@ import pandas as pd
 st.set_page_config(page_title="三角比の変換公式クイズ", layout="centered")
 
 # タイトル
-st.title("三角比クイズ（補角・余角編）")
-#st.markdown(f"全 **10 問** に挑戦します。問題の関数によって**選択肢は4種類に変化し、順番は固定**されます。", unsafe_allow_html=True)
-#st.markdown("---")
-
+st.title("三角比クイズ（変換公式編）")
 
 # -----------------------------
-# CSS（テーブルセルの縦幅を広げる調整を含む）
+# CSS（変更なし）
 # -----------------------------
 st.markdown("""
 <style>
@@ -68,11 +65,12 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 変換公式の定義 (修正済み)
+# 変換公式の定義（問題形式と解答）
 # -----------------------------
 
 functions = ["sin", "cos", "tan"]
 
+# 変換公式のオフセット (問題形式)
 OFFSETS = {
     "neg_t": r"(-\theta)", "p90_t": r"(90^\circ+\theta)", "m90_t": r"(90^\circ-\theta)",
     "p180_t": r"(180^\circ+\theta)", "m180_t": r"(180^\circ-\theta)", "p270_t": r"(270^\circ+\theta)",
@@ -82,7 +80,31 @@ OFFSETS = {
     "mneg270_t": r"(-270^\circ+\theta)", "mneg270m_t": r"(-270^\circ-\theta)",
 }
 
-# \dfrac を使用 (コンパイルエラー回避と見栄え両立)
+# ★★★ ユーザー要望に基づきキーリストを修正 ★★★
+OFFSET_RANGES = {
+    "0~180": {
+        "label": r"$0^\circ \sim 180^\circ$",
+        # 90-θ, 90+θ, 180-θ のみ
+        "keys": ["m90_t", "p90_t", "m180_t"] 
+    },
+    "0~360": {
+        "label": r"$0^\circ \sim 360^\circ$",
+        # 360+θ (p360_t) を除外
+        "keys": ["m90_t", "p90_t", "m180_t", "p180_t", "m270_t", "p270_t", "m360_t"]
+    },
+    "-180~180": {
+        "label": r"$-180^\circ \sim 180^\circ$",
+        # 180+θ (p180_t) と -180-θ (mneg180m_t) を除外
+        "keys": ["neg_t", "m90_t", "p90_t", "m180_t", "mneg90_t", "mneg90m_t", "mneg180_t"]
+    },
+    "ALL": {
+        "label": "全範囲",
+        "keys": list(OFFSETS.keys())
+    }
+}
+# ★★★ 修正箇所はここまで ★★★
+
+# 変換結果の選択肢 (LaTeX 表示用)（変更なし）
 RESULT_OPTIONS = {
     "sin_t": r"\sin\theta", "-sin_t": r"-\sin\theta",
     "cos_t": r"\cos\theta", "-cos_t": r"-\cos\theta",
@@ -94,7 +116,7 @@ RESULT_OPTIONS = {
 SIN_COS_OPTIONS_KEYS = ["sin_t", "-sin_t", "cos_t", "-cos_t"] 
 TAN_OPTIONS_KEYS = ["tan_t", "-tan_t", "cot_t", "-cot_t"] 
 
-# ★★★ 変換公式の正解データ（最終確定版）★★★
+# 変換公式の正解データ（変更なし）
 TRANSFORM_ANSWERS = {
     "sin": {
         "neg_t": "-sin_t", "p90_t": "cos_t", "m90_t": "cos_t",
@@ -103,7 +125,7 @@ TRANSFORM_ANSWERS = {
         "mneg90_t": "-cos_t", "mneg90m_t": "-cos_t", 
         "mneg180_t": "-sin_t", "mneg180m_t": "sin_t", 
         "mneg270_t": "cos_t", 
-        "mneg270m_t": "cos_t",  # 【修正】sin(-270°-θ) = cosθ
+        "mneg270m_t": "cos_t", 
     },
     "cos": {
         "neg_t": "cos_t", "p90_t": "-sin_t", "m90_t": "sin_t",
@@ -119,20 +141,22 @@ TRANSFORM_ANSWERS = {
         "m270_t": "cot_t", "p360_t": "tan_t", "m360_t": "-tan_t",
         "mneg90_t": "-cot_t", "mneg90m_t": "cot_t", 
         "mneg180_t": "tan_t", "mneg180m_t": "-tan_t", 
-        "mneg270_t": "-cot_t", # 【修正】tan(-270°+θ) = -cotθ
-        "mneg270m_t": "cot_t",  # 【修正】tan(-270°-θ) = cotθ
+        "mneg270_t": "-cot_t", 
+        "mneg270m_t": "cot_t",  
     },
 }
-# ★★★ 最終確定版はここまで ★★★
 
 MAX_QUESTIONS = 10
 
 # -----------------------------
-# セッション操作関数 (変更なし)
+# セッション操作関数（変更なし）
 # -----------------------------
 def new_question():
     st.session_state.func = random.choice(functions)
-    st.session_state.offset_key = random.choice(list(OFFSETS.keys()))
+    
+    # 選択された範囲からランダムに問題形式を選択
+    possible_offsets = OFFSET_RANGES[st.session_state.offset_range]["keys"]
+    st.session_state.offset_key = random.choice(possible_offsets)
     
     if st.session_state.func in ["sin", "cos"]:
         options_base = SIN_COS_OPTIONS_KEYS
@@ -144,7 +168,13 @@ def new_question():
     st.session_state.show_result = False
 
 def initialize_session_state():
-    if 'score' not in st.session_state:
+    # 範囲選択の状態を管理するためのフラグを追加
+    if 'range_selected' not in st.session_state:
+        st.session_state.range_selected = False
+        st.session_state.offset_range = "ALL" # デフォルト値
+    
+    # range_selected が True の場合のみクイズの状態を初期化して最初の出題を作る
+    if 'score' not in st.session_state and st.session_state.range_selected:
         st.session_state.score = 0
         st.session_state.question_count = 0
         st.session_state.history = []
@@ -186,13 +216,52 @@ def check_answer_and_advance(selected_key):
 
     st.rerun()
 
+# 初期化呼び出し
 initialize_session_state()
 
 # -----------------------------------------------
-# アプリの描画 (変更なし)
+# アプリの描画（変更なし）
 # -----------------------------------------------
 
-if st.session_state.show_result:
+if not st.session_state.range_selected:
+    # 範囲選択画面
+    st.header("出題範囲を選択してください")
+    st.markdown("---")
+    st.write("どの変換公式のグループを中心に解きますか？")
+
+    # ボタンを2行に分ける
+    row1 = st.columns(2)
+    row2 = st.columns(2)
+    
+    # $0^\circ \sim 180^\circ$
+    if row1[0].button(OFFSET_RANGES["0~180"]["label"], use_container_width=True, key="range_0_180"):
+        st.session_state.offset_range = "0~180"
+        st.session_state.range_selected = True
+        initialize_session_state()
+        st.rerun()
+        
+    # $0^\circ \sim 360^\circ$
+    if row1[1].button(OFFSET_RANGES["0~360"]["label"], use_container_width=True, key="range_0_360"):
+        st.session_state.offset_range = "0~360"
+        st.session_state.range_selected = True
+        initialize_session_state()
+        st.rerun()
+        
+    # $-180^\circ \sim 180^\circ$
+    if row2[0].button(OFFSET_RANGES["-180~180"]["label"], use_container_width=True, key="range_-180_180"):
+        st.session_state.offset_range = "-180~180"
+        st.session_state.range_selected = True
+        initialize_session_state()
+        st.rerun()
+        
+    # 全範囲
+    if row2[1].button(OFFSET_RANGES["ALL"]["label"], use_container_width=True, key="range_all"):
+        st.session_state.offset_range = "ALL"
+        st.session_state.range_selected = True
+        initialize_session_state()
+        st.rerun()
+
+elif st.session_state.show_result:
     # 結果表示
     end_time = time.time()
     elapsed = Decimal(str(end_time - st.session_state.start_time)).quantize(Decimal('0.01'), ROUND_HALF_UP)
@@ -231,6 +300,7 @@ if st.session_state.show_result:
 
     if st.button("もう一度挑戦する", use_container_width=True, type="primary"):
         st.session_state.clear()
+        initialize_session_state() # 範囲選択から再開
         st.rerun()
 
 else:
