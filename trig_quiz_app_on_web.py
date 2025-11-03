@@ -1,4 +1,4 @@
-# trig_transform_quiz_app_fixed_order_final.py
+# trig_transform_quiz_app_final_displaystyle_v2.py
 import streamlit as st
 import random
 import time
@@ -15,7 +15,7 @@ st.markdown("---")
 
 
 # -----------------------------
-# CSS（テーブルセルの縦幅を広げる調整を追加）
+# CSS（テーブルセルの縦幅を広げる調整を含む）
 # -----------------------------
 st.markdown("""
 <style>
@@ -25,9 +25,10 @@ div.stButton > button {
     height: 70px !important;
     font-size: 18px; 
 }
-/* st.table/st.dataframe のセル内の数式表示を調整 */
+
+/* ★★★ st.dataframe のセル内での数式レンダリングを強化するため、フォントサイズを少し上げるかも ★★★ */
 .stTable, .stDataFrame {
-    font-size: 18px; 
+    font-size: 20px; 
 }
 
 /* テーブル全体の配置を中央に */
@@ -37,18 +38,17 @@ div.stButton > button {
     margin-right: auto; 
 }
 
-/* ★★★ 修正箇所: テーブルの行の高さを調整 ★★★ */
+/* テーブルの行の高さを調整 (分数の見やすさ向上) */
 .stTable table th, .stTable table td {
     white-space: nowrap; 
     text-align: center !important; 
     vertical-align: middle !important;
-    padding-top: 15px !important;    /* 上のパディングを追加 */
-    padding-bottom: 15px !important; /* 下のパディングを追加 */
-    line-height: 1.5;                /* 行間を広げて分数を見やすく */
+    padding-top: 15px !important;    
+    padding-bottom: 15px !important; 
+    line-height: 1.5;                
 }
-/* ★★★ 修正箇所はここまで ★★★ */
 
-/* 列幅固定 */
+/* 列幅固定 (変更なし) */
 .stTable table th:nth-child(1), .stTable table td:nth-child(1) {
     width: 60px; 
 }
@@ -68,7 +68,7 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 変換公式の定義 (変更なし)
+# 変換公式の定義 (displaystyleを追加)
 # -----------------------------
 
 functions = ["sin", "cos", "tan"]
@@ -82,11 +82,13 @@ OFFSETS = {
     "mneg270_t": r"(-270^\circ+\theta)", "mneg270m_t": r"(-270^\circ-\theta)",
 }
 
+# \displaystyle を追加し、数式の表現を明確に
 RESULT_OPTIONS = {
     "sin_t": r"\sin\theta", "-sin_t": r"-\sin\theta",
     "cos_t": r"\cos\theta", "-cos_t": r"-\cos\theta",
     "tan_t": r"\tan\theta", "-tan_t": r"-\tan\theta",
-    "cot_t": r"\frac{1}{\tan\theta}", "-cot_t": r"-\frac{1}{\tan\theta}",
+    "cot_t": r"\displaystyle\frac{1}{\tan\theta}", 
+    "-cot_t": r"-\displaystyle\frac{1}{\tan\theta}",
 }
 
 SIN_COS_OPTIONS_KEYS = ["sin_t", "-sin_t", "cos_t", "-cos_t"] 
@@ -183,7 +185,7 @@ def check_answer_and_advance(selected_key):
 initialize_session_state()
 
 # -----------------------------------------------
-# アプリの描画 (変更なし)
+# アプリの描画
 # -----------------------------------------------
 
 if st.session_state.show_result:
@@ -198,12 +200,19 @@ if st.session_state.show_result:
 
     st.subheader("全解答の確認")
 
-    # DataFrame生成
     table_data = []
     for i, item in enumerate(st.session_state.history, 1):
         problem_disp = rf"{item['question_disp']} = ?" 
-        user_disp = rf"$$ {RESULT_OPTIONS[item['user_answer_key']]} $$"
-        correct_disp = rf"$$ {RESULT_OPTIONS[item['correct_answer_key']]} $$"
+        
+        # ★★★ 修正箇所: \text{\LARGE$...$} で囲み、Markdownのインライン数式ではなく
+        # ★★★ st.latexに近いブロックとしてレンダリングを強制する（Streamlitの裏技）
+        user_latex = RESULT_OPTIONS[item['user_answer_key']]
+        correct_latex = RESULT_OPTIONS[item['correct_answer_key']]
+
+        # $$ \text{\LARGE \displaystyle\frac{1}{\tan\theta}} $$ の形式
+        user_disp = rf"$$ \text{{\LARGE {user_latex}}} $$"
+        correct_disp = rf"$$ \text{{\LARGE {correct_latex}}} $$"
+
         mark = "○" if item['is_correct'] else "×"
 
         table_data.append({
@@ -240,7 +249,8 @@ else:
     
     cols = st.columns(4)
     for i, key in enumerate(display_options_keys):
-        latex_label = rf"$$ {RESULT_OPTIONS[key]} $$" 
+        # ボタンのラベルにも \displaystyle と \LARGE を適用
+        latex_label = rf"$$ \text{{\LARGE {RESULT_OPTIONS[key]}}} $$"
         
         with cols[i]:
             button_key = f"option_{st.session_state.question_count}_{key}"
