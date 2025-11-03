@@ -68,7 +68,7 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 変換公式の定義 (修正箇所: \dfrac を使用)
+# 変換公式の定義 (修正済み)
 # -----------------------------
 
 functions = ["sin", "cos", "tan"]
@@ -82,7 +82,7 @@ OFFSETS = {
     "mneg270_t": r"(-270^\circ+\theta)", "mneg270m_t": r"(-270^\circ-\theta)",
 }
 
-# ★★★ 修正箇所: \displaystyle\frac を \dfrac に変更 ★★★
+# \dfrac を使用 (コンパイルエラー回避と見栄え両立)
 RESULT_OPTIONS = {
     "sin_t": r"\sin\theta", "-sin_t": r"-\sin\theta",
     "cos_t": r"\cos\theta", "-cos_t": r"-\cos\theta",
@@ -90,11 +90,11 @@ RESULT_OPTIONS = {
     "cot_t": r"\dfrac{1}{\tan\theta}", 
     "-cot_t": r"-\dfrac{1}{\tan\theta}",
 }
-# ★★★ 修正箇所はここまで ★★★
 
 SIN_COS_OPTIONS_KEYS = ["sin_t", "-sin_t", "cos_t", "-cos_t"] 
 TAN_OPTIONS_KEYS = ["tan_t", "-tan_t", "cot_t", "-cot_t"] 
 
+# ★★★ 変換公式の正解データ（最終確定版）★★★
 TRANSFORM_ANSWERS = {
     "sin": {
         "neg_t": "-sin_t", "p90_t": "cos_t", "m90_t": "cos_t",
@@ -102,7 +102,8 @@ TRANSFORM_ANSWERS = {
         "m270_t": "-cos_t", "p360_t": "sin_t", "m360_t": "-sin_t",
         "mneg90_t": "-cos_t", "mneg90m_t": "-cos_t", 
         "mneg180_t": "-sin_t", "mneg180m_t": "sin_t", 
-        "mneg270_t": "cos_t", "mneg270m_t": "-cos_t",
+        "mneg270_t": "cos_t", 
+        "mneg270m_t": "cos_t",  # 【修正】sin(-270°-θ) = cosθ
     },
     "cos": {
         "neg_t": "cos_t", "p90_t": "-sin_t", "m90_t": "sin_t",
@@ -118,9 +119,11 @@ TRANSFORM_ANSWERS = {
         "m270_t": "cot_t", "p360_t": "tan_t", "m360_t": "-tan_t",
         "mneg90_t": "-cot_t", "mneg90m_t": "cot_t", 
         "mneg180_t": "tan_t", "mneg180m_t": "-tan_t", 
-        "mneg270_t": "cot_t", "mneg270m_t": "-cot_t",
+        "mneg270_t": "-cot_t", # 【修正】tan(-270°+θ) = -cotθ
+        "mneg270m_t": "cot_t",  # 【修正】tan(-270°-θ) = cotθ
     },
 }
+# ★★★ 最終確定版はここまで ★★★
 
 MAX_QUESTIONS = 10
 
@@ -208,7 +211,7 @@ if st.session_state.show_result:
         user_latex = RESULT_OPTIONS[item['user_answer_key']]
         correct_latex = RESULT_OPTIONS[item['correct_answer_key']]
 
-        # 純粋な数式文字列を $$ で囲む
+        # 純粋な数式文字列を $$ で囲む (LaTeXコンパイルが最も安定する形式)
         user_disp = rf"$$ {user_latex} $$"
         correct_disp = rf"$$ {correct_latex} $$"
 
