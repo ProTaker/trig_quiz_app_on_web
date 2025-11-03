@@ -1,4 +1,4 @@
-# trig_transform_quiz_app_final_fixed_v3.py
+# trig_transform_quiz_app_final_integrated.py
 import streamlit as st
 import random
 import time
@@ -7,9 +7,12 @@ import pandas as pd
 
 # ページ設定
 st.set_page_config(page_title="三角比の変換公式クイズ", layout="centered")
+st.title("三角比の変換公式クイズ")
+st.markdown(f"全 **10 問** に挑戦します。問題の関数によって**選択肢は4種類に変化し、順番は固定**されます。", unsafe_allow_html=True)
+st.markdown("---")
 
 # -----------------------------
-# CSS（テーブルセルの縦幅を広げる調整を含む）
+# CSS（有名角クイズのファイルと統一）
 # -----------------------------
 st.markdown("""
 <style>
@@ -22,7 +25,7 @@ div.stButton > button {
 
 /* st.table/st.dataframe のセル内の数式表示を調整 */
 .stTable, .stDataFrame {
-    font-size: 20px; 
+    font-size: 20px; /* 見栄えと分数の縦幅確保のため少し大きめに */
 }
 
 /* テーブル全体の配置を中央に */
@@ -62,24 +65,17 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 変換公式の定義 (変更なし)
+# 変換公式の定義と角度グループ
 # -----------------------------
 
 functions = ["sin", "cos", "tan"]
 MAX_QUESTIONS = 10
 
-# 角度オフセットグループの定義
+# 角度オフセットグループの定義 (出題範囲用)
 OFFSETS_GROUPS = {
-    # 0°〜180°の範囲に対応する変換
     "0_180": ["m90_t", "m180_t", "p90_t", "mneg90_t"], 
-    
-    # 0°〜360°の範囲に対応する変換
     "0_360": ["m90_t", "m180_t", "m270_t", "p90_t", "p180_t", "p270_t", "m360_t", "p360_t"],
-
-    # -180°〜180°の範囲に対応する変換
     "-180_180": ["neg_t", "m90_t", "m180_t", "p90_t", "mneg90_t", "mneg180_t", "p180_t"],
-
-    # 全範囲（すべての変換をランダムに出題）
     "all_range": ["neg_t", "p90_t", "m90_t", "p180_t", "m180_t", "p270_t", "m270_t", "p360_t", "m360_t", "mneg90_t", "mneg90m_t", "mneg180_t", "mneg180m_t", "mneg270_t", "mneg270m_t"],
 }
 
@@ -137,17 +133,16 @@ TRANSFORM_ANSWERS = {
 }
 
 # -----------------------------
-# セッション操作関数
+# セッション操作関数（有名角クイズの構造に合わせる）
 # -----------------------------
 def new_question():
     """新しい問題を生成し、セッション状態を更新する"""
     st.session_state.func = random.choice(functions)
     
-    # ★★★ 選択された範囲に基づいて offset_key を選択 ★★★
+    # 選択された範囲に基づいて offset_key を選択
     selected_range_key = st.session_state.get('angle_range_key', 'all_range')
     available_offsets = OFFSETS_GROUPS.get(selected_range_key, OFFSETS_GROUPS['all_range'])
     st.session_state.offset_key = random.choice(available_offsets)
-    # ★★★ 選択処理はここまで ★★★
     
     if st.session_state.func in ["sin", "cos"]:
         options_base = SIN_COS_OPTIONS_KEYS
@@ -158,29 +153,30 @@ def new_question():
     st.session_state.selected = None
     st.session_state.show_result = False
 
+def initialize_quiz_state():
+    """クイズ開始後のセッション状態を初期化する"""
+    # 既存のangle_range_keyは保持する
+    st.session_state.score = 0
+    st.session_state.question_count = 0
+    st.session_state.history = []
+    st.session_state.show_result = False
+    st.session_state.start_time = time.time()
+    new_question()
+
 def initialize_session_state():
-    """セッション状態を初期化する"""
+    """初期設定画面の制御と状態初期化"""
     if 'quiz_started' not in st.session_state:
-        # 初期設定画面を出すため、問題を生成しない
         st.session_state.quiz_started = False
-        st.session_state.angle_range_key = 'all_range'
+        st.session_state.angle_range_key = 'all_range' # デフォルト設定
     
+    # クイズが開始されたが、問題データがまだない場合
     if st.session_state.quiz_started and 'score' not in st.session_state:
-        st.session_state.score = 0
-        st.session_state.question_count = 0
-        st.session_state.history = []
-        st.session_state.show_result = False
-        st.session_state.start_time = time.time()
-        # 最初の問題の準備
-        new_question()
+        initialize_quiz_state()
 
 def start_quiz():
     """クイズ開始ボタンが押されたときの処理"""
-    st.session_state.clear() # 既存の状態をリセット
     st.session_state.quiz_started = True
-    # 選択した範囲は保持
-    # st.session_state.angle_range_key はフォームで更新される
-    initialize_session_state()
+    initialize_quiz_state()
     st.rerun()
     
 def check_answer_and_advance(selected_key):
@@ -222,11 +218,11 @@ def check_answer_and_advance(selected_key):
 initialize_session_state()
 
 # -----------------------------------------------
-# アプリの描画
+# アプリの描画（有名角クイズの構造に合わせる）
 # -----------------------------------------------
 
 if not st.session_state.quiz_started:
-    # ★★★ 初期設定画面 ★★★
+    ## ★★★ 初期設定画面 ★★★
     st.header("🎯 出題角度範囲の設定")
     st.markdown("出題される変換公式の角度（例: $180^\circ - \theta$）の範囲を選択してください。")
     st.markdown("---")
@@ -238,12 +234,11 @@ if not st.session_state.quiz_started:
         'all_range': r'全範囲（-360^\circ \sim 360^\circ 程度）',
     }
 
-    # ラジオボタンで選択
     selected_range_key = st.radio(
         "**出題範囲を選択**",
         options=list(range_options.keys()),
         format_func=lambda x: range_options[x],
-        key='angle_range_key' # 選択をセッションステートに保存
+        key='angle_range_key' 
     )
     
     st.markdown("---")
@@ -252,7 +247,7 @@ if not st.session_state.quiz_started:
         start_quiz()
 
 elif st.session_state.show_result:
-    # 結果表示 (変更なし)
+    ## ★★★ 結果表示 ★★★
     end_time = time.time()
     elapsed = Decimal(str(end_time - st.session_state.start_time)).quantize(Decimal('0.01'), ROUND_HALF_UP)
 
@@ -289,10 +284,11 @@ elif st.session_state.show_result:
 
     if st.button("もう一度挑戦する", use_container_width=True, type="primary"):
         st.session_state.clear()
+        initialize_session_state() # 初期設定画面に戻るために再度初期化
         st.rerun()
 
 else:
-    # クイズ本体 (変更なし)
+    ## ★★★ クイズ本体 ★★★
     st.subheader(f"問題 {st.session_state.question_count + 1} / {MAX_QUESTIONS}")
 
     current_func = st.session_state.func
